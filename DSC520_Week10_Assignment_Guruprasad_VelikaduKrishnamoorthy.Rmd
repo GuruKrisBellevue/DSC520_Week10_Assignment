@@ -1,0 +1,133 @@
+---
+title: "DSC520_Week10_Assignment_Guruprasad_VelikaduKrishnamoorthy"
+author: "Guruprasad Velikadu Krishnamoorthy"
+date: "2023-02-19"
+output: 
+  pdf_document: 
+    highlight: espresso
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/Gurup/GURU/Learning/Masters/Term_2/DSC520_T302_Statistics_for_Data_Science/Week_10/data")
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 90), tidy = TRUE)
+```
+# Week 10 Assignment 
+
+
+```{r include=TRUE,message=FALSE}
+library(foreign)
+library(caTools)
+library(dplyr)
+library(kableExtra)
+```
+
+# 1.b.i Fit a binary logistic regression model to the data set that predicts whether or not the patient survived for one year (the Risk1Y variable) after the surgery. Use the glm() function to perform the logistic regression. See Generalized Linear Models for an example. Include a summary using the summary() function in your results.
+```{r}
+# Loading the arff file using Foreign package
+thoraric_data=read.arff("ThoraricSurgery.arff")
+
+kbl(head(thoraric_data[,1:13]),caption = "Thoraric DataFrame", booktabs = T) %>% kable_styling(latex_options = c("striped", "hold_position"))
+# Examining the structure
+str(thoraric_data)
+# creating a split variable with 80:20 ratio for train and test datasets
+set.seed(40)
+split <-  sample.split(thoraric_data,SplitRatio = 0.8)
+split
+train <- subset(thoraric_data,split=="TRUE")
+test <- subset(thoraric_data,split=="FALSE")
+# Creating Logistic Regression Model 
+td_model1 <- glm(Risk1Yr~.,data=train,family=binomial())
+summary(td_model1)
+
+```
+# 1.b.ii. According to the summary, which variables had the greatest effect on the survival rate?
+```{r}
+# Reading the p-values from our model
+p_values <- coef(summary(td_model1))[,4]
+p_values[p_values<=0.05]
+```
+
+##### Solution:  # Results suggest based on the p values that the variables `r names(p_values[p_values<=0.05])` are statistically significant as the p values were less than 0.05.
+
+# 1.b.iii. To compute the accuracy of your model, use the dataset to predict the outcome variable. The percent of correct predictions is the accuracy of your model. What is the accuracy of your model?
+```{r}
+# Running the test through the model
+result1 <- predict(td_model1,train,type="response")
+head(result1)
+
+# Validate the model by creating ConfusionMatrix
+confmatrix <- table(Actual_value=train$Risk1Yr,Predicted_Value=result1> 0.5)
+confmatrix
+
+# Calculating the Accuracy
+accuracy_model1 <- round(((confmatrix[[1,1]]+confmatrix[[2,2]])/sum(confmatrix)),digits=4)*100
+accuracy_model1
+
+# Creating functions to calculate the Precision and Recall
+model_precision <- function(input_matrix) {
+	# Selecting only True positive
+    tp <- input_matrix[2, 2]
+	# Selecting only false positive
+    fp <- input_matrix[1, 2]
+    return (tp / (tp + fp))
+}
+
+model_recall <- function(input_matrix) {
+# Selecting onlytrue positive
+    tp <- input_matrix[2, 2]
+    # Selecting only false negative
+    fn <- input_matrix[2, 1]
+    return (tp / (tp + fn))
+}
+# Calculating Precision and Recall for the model
+precision_model1 <- model_precision(confmatrix)
+precision_model1
+recall_model1 <- model_recall(confmatrix)
+recall_model1
+```
+##### Solution: The accuracy of the model Thoraric model is `r accuracy_model1` %, Precision is `r precision_model1` and recall is `r recall_model1`
+
+# 2.a.Fit a logistic regression model to the binary-classifier-data.csv dataset
+```{r}
+# Reading the Binary Classifier Dataset
+bin_clas_df <- read.csv("binary-classifier-data.csv")
+
+kbl(head(bin_clas_df),caption = "Binary Classifier DataFrame", booktabs = T) %>% kable_styling(latex_options = c("striped", "hold_position"))
+# Changing the type of label as Factor
+bin_clas_df$label <- as.factor(bin_clas_df$label)
+# Creating a new split variable
+split_2 <-  sample.split(bin_clas_df,SplitRatio = 0.8)
+# Creating seperate dataset for training and testing the model
+train_2 <- subset(bin_clas_df,split=="TRUE")
+test_2 <- subset(bin_clas_df,split=="FALSE")
+# Creating new model for Binary Classifier dataset
+bin_clas_model <- glm(label~x+y,data=train_2,family=binomial())
+summary(bin_clas_model)
+# Results indicate y can be significant in predicting the label as the p value is less than 0.05
+```
+
+
+
+# 2.b. The dataset (found in binary-classifier-data.csv) contains three variables; label, x, and y. The label variable is either 0 or 1 and is the output we want to predict using the x and y variables.
+# What is the accuracy of the logistic regression classifier?
+```{r}
+# Running the test through the model
+res_bin <- predict(bin_clas_model,train_2,type="response")
+
+# Validate the model by creating a confusion matrix
+confmatrix_2 <- table(Actual_value=train_2$label,Predicted_Value=res_bin> 0.5)
+confmatrix_2
+
+# Accuracy
+bin_clas_model_accuracy <- round(((confmatrix_2[[1,1]]+confmatrix_2[[2,2]])/sum(confmatrix_2)),digits=4)*100
+bin_clas_model_accuracy
+# # Calculating Precision and Recall for the model
+precision_bin_clas_model <- model_precision(confmatrix_2)
+precision_bin_clas_model
+recall_bin_clas_model <- model_recall(confmatrix_2)
+recall_bin_clas_model
+```
+
+##### Solution: The accuracy of the model Binary Classifier data model is `r bin_clas_model_accuracy` %, Precision is `r precision_bin_clas_model` and recall is `r recall_bin_clas_model`
+
